@@ -1,0 +1,15 @@
+{
+  "name": "gemini-live-voice-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Voice bot app for Gemini 3.1 Flash Live (React frontend + Node WebSocket proxy)",
+  "scripts": {
+    "postinstall": "npm --prefix server install && npm --prefix client install",
+    "dev": "concurrently -n server,client -c blue,green \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "build": "npm --prefix client run build",
+    "start": "node server/index.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
