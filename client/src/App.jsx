@@ -34,7 +34,9 @@ const saveSetting = (key, value) => {
 
 export default function App() {
   const [voice, setVoice] = useState(() => loadSetting('voice', VOICES[0].id));
-  const [systemPrompt, setSystemPrompt] = useState(() => loadSetting('systemPrompt', DEFAULT_PROMPT));
+  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_PROMPT);
+  const [promptDraft, setPromptDraft] = useState('');
+  const [saving, setSaving] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -43,8 +45,41 @@ export default function App() {
   }, [voice]);
 
   useEffect(() => {
-    saveSetting('systemPrompt', systemPrompt);
-  }, [systemPrompt]);
+    let cancelled = false;
+    fetch('/api/settings')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.systemPrompt) setSystemPrompt(data.systemPrompt);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const openSettings = () => {
+    setPromptDraft(systemPrompt);
+    setSettingsOpen(true);
+  };
+
+  const onSaveSettings = async () => {
+    const value = promptDraft.trim();
+    setSaving(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemPrompt: value }),
+      });
+      if (!res.ok) return;
+      setSystemPrompt(value);
+      setSettingsOpen(false);
+    } catch {
+      /* keep modal open on failure */
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const session = useLiveSession({ wsUrl: WS_URL, systemInstruction: systemPrompt, voice });
 
@@ -106,7 +141,7 @@ export default function App() {
             <span className="status-dot" />
             {STATUS_LABELS[session.status] || session.status}
           </div>
-          <button className="icon-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <button className="icon-btn" onClick={openSettings} aria-label="Settings">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -233,13 +268,16 @@ export default function App() {
             <div className="modal-body">
               <label className="field">
                 <span>System instructions</span>
-                <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={8} />
+                <textarea value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} rows={8} />
               </label>
-              <p className="note">Applies to the next session. Your API key lives in server/.env.</p>
+              <p className="note">Saved for everyone who uses the app. Applies to the next session.</p>
             </div>
             <div className="modal-actions">
-              <button className="btn primary" onClick={() => setSettingsOpen(false)}>
-                Done
+              <button className="btn ghost" onClick={() => setSettingsOpen(false)}>
+                Cancel
+              </button>
+              <button className="btn primary" onClick={onSaveSettings} disabled={saving}>
+                {saving ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>

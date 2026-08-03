@@ -5,6 +5,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import express from 'express';
 import { WebSocket, WebSocketServer } from 'ws';
+import { getSetting, setSetting } from './store.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -27,6 +28,28 @@ process.on('unhandledRejection', (reason) => {
 });
 
 const app = express();
+app.use(express.json());
+
+app.get('/api/settings', async (req, res) => {
+  try {
+    const systemPrompt = (await getSetting('systemPrompt', '')) ?? '';
+    res.json({ systemPrompt });
+  } catch (err) {
+    console.error('[server] GET /api/settings failed:', err.message);
+    res.status(500).json({ error: 'Failed to load settings.' });
+  }
+});
+
+app.put('/api/settings', async (req, res) => {
+  try {
+    const systemPrompt = String(req.body?.systemPrompt ?? '');
+    await setSetting('systemPrompt', systemPrompt);
+    res.json({ ok: true, systemPrompt });
+  } catch (err) {
+    console.error('[server] PUT /api/settings failed:', err.message);
+    res.status(500).json({ error: 'Failed to save settings.' });
+  }
+});
 
 const clientDist = path.resolve(__dirname, '../client/dist');
 const clientIndex = path.join(clientDist, 'index.html');
