@@ -6,6 +6,10 @@ const INPUT_RATE = 16000;
 const DEFAULT_VOICE = 'Kore';
 const DEFAULT_MODEL = 'gemini-3.1-flash-live-preview';
 
+const IS_IOS =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1);
+
 export const VOICES = [
   { id: 'Puck', label: 'Aria' },
   { id: 'Charon', label: 'Liam' },
@@ -43,6 +47,8 @@ export class GeminiLiveClient {
 
   async connect() {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
+
+    this.ensureAudioContextSync();
 
     this.emit('status', { state: 'connecting' });
 
@@ -107,19 +113,47 @@ export class GeminiLiveClient {
     this.stopMic();
     this.clearAudioQueue();
     try {
+      this.ws?.close();
+    } catch {
+      /* noop */
+    }
+    this.ws = null;
+  }
+
+  destroy() {
+    this.disconnect();
+    if (this._visListener) {
+      document.removeEventListener('visibilitychange', this._visListener);
+      this._visListener = null;
+    }
+    try {
       this.audioContext?.close();
     } catch {
       /* noop */
     }
     this.audioContext = null;
     this.inputNode = null;
-    this.outputNode = null;
-    try {
-      this.ws?.close();
-    } catch {
-      /* noop */
+  }
+
+  ensureAudioContextSync() {
+    if (this.audioContext) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    this.audioContext = new AC();
+    console.log(`[live] AudioContext created (state=${this.audioContext.state}, sampleRate=${this.audioContext.sampleRate})`);
+    this.audioContext.onstatechange = () => {
+      console.log(`[live] AudioContext state -> ${this.audioContext.state}`);
+    };
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume().catch(() => {});
     }
-    this.ws = null;
+    if (!this._visListener) {
+      this._visListener = () => {
+        if (!document.hidden && this.audioContext?.state === 'suspended') {
+          this.audioContext.resume().catch(() => {});
+        }
+      };
+      document.addEventListener('visibilitychange', this._visListener);
+    }
   }
 
   sendSetup() {
@@ -154,32 +188,68 @@ export class GeminiLiveClient {
   }
 
   async setupAudio() {
-    if (this.audioContext) {
+    this.ensureAudioContextSync();
+    if (this.inputNode) {
       if (this.audioContext.state === 'suspended') await this.audioContext.resume();
       return;
     }
 
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    console.log(`[live] AudioContext created (state=${this.audioContext.state}, sampleRate=${this.audioContext.sampleRate})`);
-    this.audioContext.onstatechange = () => {
-      console.log(`[live] AudioContext state -> ${this.audioContext.state}`);
-    };
-    await this.audioContext.resume();
-    console.log(`[live] AudioContext resumed (state=${this.audioContext.state})`);
+    const ctx = this.audioContext;
+    if (!IS_IOS) {
+      try {
+        await ctx.audioWorklet.addModule(INPUT_WORKLET_URL);
+        console.log('[live] input worklet registered');
+        this.inputNode = new AudioWorkletNode(ctx, 'audio-input-processor', {
+          numberOfInputs: 1,
+          numberOfOutputs: 1,
+        });
+        this.inputNode.port.onmessage = (e) => {
+          if (!this.ready) return;
+          const base64 = encodePCM16ToBase64(e.data);
+          if (this.audioChunksSent++ < 5) console.log(`[live] audio -> ${base64.length} chars`);
+          this.sendRealtimeInput(base64);
+        };
+        this.inputNode.connect(ctx.destination);
+        console.log('[live] input capture via AudioWorklet');
+        return;
+      } catch (err) {
+        console.warn('[live] AudioWorklet unavailable, falling back to ScriptProcessor:', err.message);
+      }
+    } else {
+      console.warn('[live] iOS detected — using ScriptProcessor instead of AudioWorklet to avoid Safari crashes');
+    }
+    this.setupScriptProcessor();
+  }
 
-    await this.audioContext.audioWorklet.addModule(INPUT_WORKLET_URL);
-    console.log('[live] input worklet registered');
-    this.inputNode = new AudioWorkletNode(this.audioContext, 'audio-input-processor', {
-      numberOfInputs: 1,
-      numberOfOutputs: 1,
-    });
-    this.inputNode.port.onmessage = (e) => {
+  setupScriptProcessor() {
+    const ctx = this.audioContext;
+    const node = ctx.createScriptProcessor(4096, 1, 1);
+    node.onaudioprocess = (e) => {
       if (!this.ready) return;
-      const base64 = encodePCM16ToBase64(e.data);
+      const input = e.inputBuffer.getChannelData(0);
+      const ratio = INPUT_RATE / ctx.sampleRate;
+      const outLen = Math.max(1, Math.floor(input.length * ratio));
+      const out = new Float32Array(outLen);
+      for (let i = 0; i < outLen; i++) {
+        const pos = i / ratio;
+        const i0 = Math.floor(pos);
+        const frac = pos - i0;
+        const s0 = input[i0];
+        const s1 = input[i0 + 1] ?? s0;
+        out[i] = s0 + (s1 - s0) * frac;
+      }
+      const pcm16 = new Int16Array(outLen);
+      for (let i = 0; i < outLen; i++) {
+        const s = Math.max(-1, Math.min(1, out[i]));
+        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+      const base64 = encodePCM16ToBase64(pcm16.buffer);
       if (this.audioChunksSent++ < 5) console.log(`[live] audio -> ${base64.length} chars`);
       this.sendRealtimeInput(base64);
     };
-    this.inputNode.connect(this.audioContext.destination);
+    node.connect(ctx.destination);
+    this.inputNode = node;
+    console.log('[live] input capture via ScriptProcessor');
   }
 
   async ensureMicStream() {

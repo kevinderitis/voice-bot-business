@@ -15,7 +15,7 @@ export function useLiveSession({ wsUrl, systemInstruction, voice }) {
 
   useEffect(() => {
     return () => {
-      clientRef.current?.disconnect();
+      clientRef.current?.destroy();
       clientRef.current = null;
     };
   }, []);
