@@ -139,12 +139,13 @@ export class GeminiLiveClient {
     if (this.audioContext) return;
     const AC = window.AudioContext || window.webkitAudioContext;
     this.audioContext = new AC();
-    console.log(`[live] AudioContext created (state=${this.audioContext.state}, sampleRate=${this.audioContext.sampleRate})`);
-    this.audioContext.onstatechange = () => {
-      console.log(`[live] AudioContext state -> ${this.audioContext.state}`);
+    const ctx = this.audioContext;
+    console.log(`[live] AudioContext created (state=${ctx.state}, sampleRate=${ctx.sampleRate})`);
+    ctx.onstatechange = () => {
+      console.log(`[live] AudioContext state -> ${ctx.state}`);
     };
-    if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume().catch(() => {});
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
     }
     if (!this._visListener) {
       this._visListener = () => {

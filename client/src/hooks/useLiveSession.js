@@ -47,14 +47,15 @@ export function useLiveSession({ wsUrl, systemInstruction, voice }) {
               modelTurnRef.current = { id: uid(), role: 'model', text: '' };
             }
             modelTurnRef.current.text += ev.text;
+            const turn = modelTurnRef.current;
             setIsModelSpeaking(true);
             setTranscripts((t) => {
               const next = [...t];
-              const idx = next.findIndex((m) => m.id === modelTurnRef.current.id);
+              const idx = next.findIndex((m) => m.id === turn.id);
               if (idx >= 0) {
-                next[idx] = { ...modelTurnRef.current };
+                next[idx] = { ...turn };
               } else {
-                next.push({ ...modelTurnRef.current });
+                next.push({ ...turn });
               }
               return next;
             });
