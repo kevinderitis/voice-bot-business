@@ -1,22 +1,28 @@
 import 'dotenv/config';
+import dotenv from 'dotenv';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import pg from 'pg';
+import { MongoClient } from 'mongodb';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
+
 const DATA_DIR = path.join(__dirname, 'data');
 const JSON_FILE = path.join(DATA_DIR, 'settings.json');
 
-const dbUrl = process.env.DATABASE_URL;
-const usePostgres = Boolean(dbUrl);
+const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+const useMongo = Boolean(mongoUri);
 
-let pool = null;
+let client = null;
+let collection = null;
 
-const ensurePostgres = async () => {
-  if (pool) return;
-  pool = new pg.Pool({ connectionString: dbUrl });
-  await pool.query(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
+const ensureMongo = async () => {
+  if (collection) return;
+  client = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 5000 });
+  await client.connect();
+  const db = client.db(process.env.MONGO_DB || 'voice-bot');
+  collection = db.collection('settings');
 };
 
 const readJson = () => {
@@ -33,23 +39,19 @@ const writeJson = (data) => {
 };
 
 export const getSetting = async (key, fallback = null) => {
-  if (usePostgres) {
-    await ensurePostgres();
-    const { rows } = await pool.query('SELECT value FROM settings WHERE key = $1', [key]);
-    return rows.length ? rows[0].value : fallback;
+  if (useMongo) {
+    await ensureMongo();
+    const doc = await collection.findOne({ key });
+    return doc?.value ?? fallback;
   }
   const data = readJson();
   return key in data ? data[key] : fallback;
 };
 
 export const setSetting = async (key, value) => {
-  if (usePostgres) {
-    await ensurePostgres();
-    await pool.query(
-      `INSERT INTO settings (key, value) VALUES ($1, $2)
-       ON CONFLICT (key) DO UPDATE SET value = $2`,
-      [key, value]
-    );
+  if (useMongo) {
+    await ensureMongo();
+    await collection.updateOne({ key }, { $set: { value } }, { upsert: true });
     return;
   }
   const data = readJson();

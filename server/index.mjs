@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import http from 'node:http';
@@ -8,6 +9,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { getSetting, setSetting } from './store.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const API_KEY = process.env.GEMINI_API_KEY;
 const PORT = Number(process.env.PORT || 8787);
