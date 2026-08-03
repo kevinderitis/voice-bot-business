@@ -78,7 +78,7 @@ export function useLiveSession({ wsUrl, systemInstruction, voice }) {
       await client.connect();
     } catch (err) {
       setStatus('idle');
-      setError(err?.message || 'No se pudo conectar con el servidor de voz.');
+      setError(err?.message || 'Could not connect to the voice server.');
     }
   }, [wsUrl, systemInstruction, voice]);
 

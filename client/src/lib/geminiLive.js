@@ -6,13 +6,21 @@ const INPUT_RATE = 16000;
 const DEFAULT_VOICE = 'Kore';
 const DEFAULT_MODEL = 'gemini-3.1-flash-live-preview';
 
-export const VOICES = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Aoede'];
+export const VOICES = [
+  { id: 'Puck', label: 'Aria' },
+  { id: 'Charon', label: 'Liam' },
+  { id: 'Kore', label: 'Maya' },
+  { id: 'Fenrir', label: 'Diego' },
+  { id: 'Aoede', label: 'Iris' },
+];
 
 export class GeminiLiveClient {
   constructor({ wsUrl, onEvent, systemInstruction, voice, model }) {
     this.wsUrl = wsUrl;
     this.onEvent = onEvent || (() => {});
-    this.systemInstruction = systemInstruction || 'Eres un asistente de voz amable y servicial. Respondes en el idioma en el que te hablen.';
+    this.systemInstruction =
+      systemInstruction ||
+      'You are a friendly, helpful voice assistant. Always reply in the language you are spoken to. Be concise and natural, like a real conversation.';
     this.voice = voice || DEFAULT_VOICE;
     this.model = model || DEFAULT_MODEL;
 
@@ -47,7 +55,7 @@ export class GeminiLiveClient {
       }
       this.ws.onopen = () => resolve();
       this.ws.onerror = (e) => {
-        this.emit('error', { message: 'No se pudo conectar con el servidor de voz. ¿Está encendido el servidor?' });
+        this.emit('error', { message: 'Could not connect to the voice server. Is it running?' });
         reject(new Error('websocket error'));
       };
     });
@@ -69,8 +77,9 @@ export class GeminiLiveClient {
       this.ready = false;
       this.stopMic();
       this.emit('status', { state: 'disconnected' });
-      if (e.code && e.code !== 1000 && !this.serverErrorShown) {
-        this.emit('error', { message: `La conexión se cerró (código ${e.code}).` });
+      const normalClose = [1000, 1001, 1005].includes(e.code);
+      if (e.code && !normalClose && !this.serverErrorShown) {
+        this.emit('error', { message: `The connection was closed (code ${e.code}).` });
       }
       this.serverErrorShown = false;
     };
@@ -80,13 +89,13 @@ export class GeminiLiveClient {
     try {
       await this.ensureMicStream();
     } catch (err) {
-      this.emit('error', { message: 'No se pudo acceder al micrófono: ' + (err?.message || err) });
+      this.emit('error', { message: 'Could not access the microphone: ' + (err?.message || err) });
     }
 
     try {
       await this.setupAudio();
     } catch (err) {
-      this.emit('error', { message: 'Problema configurando el audio: ' + (err?.message || err) });
+      this.emit('error', { message: 'Problem setting up audio: ' + (err?.message || err) });
     }
 
     await this.startMic();
@@ -200,7 +209,7 @@ export class GeminiLiveClient {
         console.log('[live] mic wired to input worklet');
       } catch (err) {
         console.error('[live] startMic error:', err);
-        this.emit('error', { message: 'No se pudo acceder al micrófono: ' + (err?.message || err) });
+        this.emit('error', { message: 'Could not access the microphone: ' + (err?.message || err) });
         return;
       }
     }
@@ -307,7 +316,7 @@ export class GeminiLiveClient {
       const sc = msg.serverContent;
 
       if (sc.inputTranscription && sc.inputTranscription.text) {
-        console.log('[live] 🎤 tú:', sc.inputTranscription.text);
+        console.log('[live] 🎤 you:', sc.inputTranscription.text);
         this.emit('userText', { text: sc.inputTranscription.text });
       }
 

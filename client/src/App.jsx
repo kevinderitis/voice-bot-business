@@ -1,24 +1,25 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveSession } from './hooks/useLiveSession.js';
 import { VOICES } from './lib/geminiLive.js';
 
 const DEFAULT_PROMPT =
-  'Eres un asistente de voz amable, carismático y servicial. Responde siempre en el idioma en el que te hablen. Sé conciso y natural, como en una conversación real.';
+  'You are a friendly, charismatic, and helpful voice assistant. Always reply in the language you are spoken to. Be concise and natural, like a real conversation.';
 
 const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:8787/ws`;
 
 const STATUS_LABELS = {
-  idle: 'Desconectado',
-  connecting: 'Conectando…',
-  connected: 'Conectado',
-  ready: 'Conectado · listo',
-  disconnected: 'Desconectado',
+  idle: 'Disconnected',
+  connecting: 'Connecting…',
+  connected: 'Connected',
+  ready: 'Ready',
+  disconnected: 'Disconnected',
 };
 
 export default function App() {
-  const [voice, setVoice] = useState(VOICES[0]);
+  const [voice, setVoice] = useState(VOICES[0].id);
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_PROMPT);
   const [textInput, setTextInput] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const session = useLiveSession({ wsUrl: WS_URL, systemInstruction: systemPrompt, voice });
 
@@ -26,8 +27,9 @@ export default function App() {
   const canTalk = session.status === 'ready';
   const canInterrupt = isConnected && session.isMicOn === false && session.isModelSpeaking;
 
+  const voiceLabel = (id) => VOICES.find((v) => v.id === id)?.label || id;
+
   const onMicClick = () => {
-    console.log('[ui] mic toggle clicked, canTalk=', canTalk, 'status=', session.status, 'isMicOn=', session.isMicOn);
     if (!canTalk) return;
     if (session.isMicOn) {
       session.stopTalking();
@@ -51,26 +53,46 @@ export default function App() {
   };
 
   const transcriptList = useMemo(() => session.transcripts, [session.transcripts]);
+  const transcriptRef = useRef(null);
+
+  useEffect(() => {
+    const el = transcriptRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [transcriptList]);
 
   return (
     <div className="app">
       <header className="header">
         <div className="logo">
-          <span className="logo-badge">◆</span>
+          <span className={`logo-badge ${isConnected ? 'online' : ''}`}>◆</span>
           <div>
             <h1>Voice Bot</h1>
-            <p>Gemini 3.1 Flash Live</p>
+            <p>Live Voice Assistant</p>
           </div>
         </div>
-        <div className={`status-pill ${isConnected ? 'on' : ''}`}>
-          <span className="status-dot" />
-          {STATUS_LABELS[session.status] || session.status}
+        <div className="header-right">
+          {isConnected && (
+            <div className="online-pill">
+              <span className="online-dot" />
+              Online
+            </div>
+          )}
+          <div className={`status-pill ${isConnected ? 'on' : ''}`}>
+            <span className="status-dot" />
+            {STATUS_LABELS[session.status] || session.status}
+          </div>
+          <button className="icon-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
         </div>
       </header>
 
       {session.error && <div className="error-banner">{session.error}</div>}
 
-      <main className="main">
+      <main className={`main ${isConnected ? 'main-connected' : ''}`}>
         <section className="card voice-card">
           <div className="mic-wrap">
             <button
@@ -78,7 +100,7 @@ export default function App() {
               onClick={onMicClick}
               onContextMenu={(e) => e.preventDefault()}
               disabled={!canTalk}
-              aria-label={session.isMicOn ? 'Silenciar micrófono' : 'Reactivar micrófono'}
+              aria-label={session.isMicOn ? 'Mute microphone' : 'Unmute microphone'}
             >
               <svg viewBox="0 0 24 24" fill="currentColor" className="mic-icon">
                 <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z" />
@@ -87,42 +109,42 @@ export default function App() {
             </button>
             <p className="mic-hint">
               {!canTalk
-                ? 'Conecta la sesión para empezar'
+                ? 'Connect the session to start'
                 : session.isMicOn
-                  ? 'Escuchando… habla con normalidad'
-                  : 'Silenciado… toca para reactivar'}
+                  ? 'Listening… just talk normally'
+                  : 'Muted… tap to unmute'}
             </p>
           </div>
 
           <div className="controls">
             {isConnected ? (
               <button className="btn danger" onClick={session.disconnect}>
-                Desconectar
+                Hang Up
               </button>
             ) : (
               <button className="btn primary" onClick={session.connect} disabled={session.status === 'connecting'}>
-                {session.status === 'connecting' ? 'Conectando…' : 'Conectar'}
+                {session.status === 'connecting' ? 'Connecting…' : 'Connect'}
               </button>
             )}
 
             {canInterrupt && (
               <button className="btn ghost" onClick={onInterrupt}>
-                Interrumpir
+                Interrupt
               </button>
             )}
 
             {isConnected && (
               <button className="btn ghost" onClick={session.testAudio}>
-                Probar audio
+                Test Audio
               </button>
             )}
 
             <label className="field">
-              <span>Voz</span>
+              <span>Voice</span>
               <select value={voice} onChange={(e) => setVoice(e.target.value)}>
                 {VOICES.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
+                  <option key={v.id} value={v.id}>
+                    {v.label}
                   </option>
                 ))}
               </select>
@@ -132,17 +154,17 @@ export default function App() {
 
         <section className="card chat-card">
           <div className="chat-head">
-            <h2>Transcripción</h2>
-            {session.isModelSpeaking && <span className="speaking-badge">hablando…</span>}
+            <h2>Transcript</h2>
+            {session.isModelSpeaking && <span className="speaking-badge">speaking…</span>}
           </div>
 
-          <div className="transcript">
+          <div className="transcript" ref={transcriptRef}>
             {transcriptList.length === 0 ? (
-              <p className="empty">Aún no hay mensajes. Conecta y empieza a hablar: escucharás la respuesta en vivo.</p>
+              <p className="empty">No messages yet. Connect and start talking — you will hear the response live.</p>
             ) : (
               transcriptList.map((m) => (
                 <div key={m.id} className={`msg ${m.role}`}>
-                  <span className="msg-role">{m.role === 'user' ? 'Tú' : 'Bot'}</span>
+                  <span className="msg-role">{m.role === 'user' ? 'You' : 'Assistant'}</span>
                   <p>{m.text}</p>
                 </div>
               ))
@@ -154,25 +176,50 @@ export default function App() {
               type="text"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder="O escribe un mensaje de texto…"
+              placeholder="Or type a message…"
               disabled={!canTalk}
             />
             <button className="btn primary" type="submit" disabled={!canTalk || !textInput.trim()}>
-              Enviar
+              Send
             </button>
           </form>
         </section>
-
-        <section className="card prompt-card">
-          <label className="field">
-            <span>Instrucciones del sistema</span>
-            <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={4} />
-          </label>
-          <p className="note">
-            Aplica a la próxima sesión. Genera tu API key en aistudio.google.com/app/apikey y guárdala en server/.env.
-          </p>
-        </section>
       </main>
+
+      {isConnected && (
+        <div className="mobile-hangup">
+          <button className="btn hangup" onClick={session.disconnect}>
+            Hang Up
+          </button>
+        </div>
+      )}
+
+      {settingsOpen && (
+        <div className="modal-overlay" onClick={() => setSettingsOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Settings</h2>
+              <button className="icon-btn" onClick={() => setSettingsOpen(false)} aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <label className="field">
+                <span>System instructions</span>
+                <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={8} />
+              </label>
+              <p className="note">Applies to the next session. Your API key lives in server/.env.</p>
+            </div>
+            <div className="modal-actions">
+              <button className="btn primary" onClick={() => setSettingsOpen(false)}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

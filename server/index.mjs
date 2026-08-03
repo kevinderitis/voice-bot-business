@@ -15,7 +15,7 @@ const GEMINI_WS_URL =
 
 if (!API_KEY) {
   console.error(
-    '[server] Missing GEMINI_API_KEY. Copy server/.env.example to server/.env and set your key from https://aistudio.google.com/app/apikey'
+    '[server] Missing API key. Copy server/.env.example to server/.env and set your key.'
   );
 }
 
@@ -75,7 +75,7 @@ wss.on('connection', (clientWs) => {
         JSON.stringify({
           error: {
             code: 'NO_API_KEY',
-            message: 'El servidor no tiene GEMINI_API_KEY configurada. Crea server/.env a partir de .env.example.',
+            message: 'The server has no API key configured. Create server/.env from .env.example.',
           },
         })
       );
@@ -102,7 +102,7 @@ wss.on('connection', (clientWs) => {
       console.error('[gemini] connection error:', err.message);
       safeSend(
         clientWs,
-        JSON.stringify({ error: { code: 'GEMINI_WS_ERROR', message: `Error al conectar con Gemini: ${err.message}` } })
+        JSON.stringify({ error: { code: 'GEMINI_WS_ERROR', message: `Error connecting to the voice service: ${err.message}` } })
       );
     });
 
@@ -115,7 +115,7 @@ wss.on('connection', (clientWs) => {
         JSON.stringify({
           error: {
             code: 'GEMINI_CLOSED',
-            message: reasonText ? `Gemini cerró la conexión: ${reasonText}` : 'La conexión con Gemini se cerró.',
+            message: reasonText ? `The voice service closed the connection: ${reasonText}` : 'The connection with the voice service was closed.',
           },
         })
       );
