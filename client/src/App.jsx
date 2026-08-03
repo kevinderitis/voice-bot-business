@@ -5,7 +5,7 @@ import { VOICES } from './lib/geminiLive.js';
 const DEFAULT_PROMPT =
   'You are a friendly, charismatic, and helpful voice assistant. Always reply in the language you are spoken to. Be concise and natural, like a real conversation.';
 
-const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:8787/ws`;
+const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
 
 const STATUS_LABELS = {
   idle: 'Disconnected',

@@ -9,6 +9,9 @@
     "build": "npm --prefix client run build",
     "start": "node server/index.mjs"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "concurrently": "^9.1.0"
   }
