@@ -15,11 +15,36 @@ const STATUS_LABELS = {
   disconnected: 'Disconnected',
 };
 
+const loadSetting = (key, fallback) => {
+  try {
+    const v = localStorage.getItem(key);
+    return v != null ? v : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const saveSetting = (key, value) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* noop */
+  }
+};
+
 export default function App() {
-  const [voice, setVoice] = useState(VOICES[0].id);
-  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_PROMPT);
+  const [voice, setVoice] = useState(() => loadSetting('voice', VOICES[0].id));
+  const [systemPrompt, setSystemPrompt] = useState(() => loadSetting('systemPrompt', DEFAULT_PROMPT));
   const [textInput, setTextInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    saveSetting('voice', voice);
+  }, [voice]);
+
+  useEffect(() => {
+    saveSetting('systemPrompt', systemPrompt);
+  }, [systemPrompt]);
 
   const session = useLiveSession({ wsUrl: WS_URL, systemInstruction: systemPrompt, voice });
 
