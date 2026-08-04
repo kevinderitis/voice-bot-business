@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Voice Bot</title>
+  <link rel="stylesheet" href="/admin/styles.css" />
+</head>
+<body>
+  <div id="login-view" class="login-card hidden">
+    <h1>Panel de Administración</h1>
+    <form id="login-form">
+      <label class="field">
+        <span>Usuario</span>
+        <input id="username" type="text" autocomplete="username" required />
+      </label>
+      <label class="field">
+        <span>Contraseña</span>
+        <input id="password" type="password" autocomplete="current-password" required />
+      </label>
+      <p id="login-error" class="error-text"></p>
+      <button class="btn primary" type="submit">Entrar</button>
+    </form>
+  </div>
+
+  <div id="app-view" class="hidden">
+    <header class="topbar">
+      <div>
+        <h1>Panel de Administración</h1>
+        <p class="sub">Reservas y disponibilidad</p>
+      </div>
+      <button id="logout" class="btn ghost">Salir</button>
+    </header>
+
+    <nav class="tabs">
+      <button data-tab="reservations" class="tab active">Reservas</button>
+      <button data-tab="availability" class="tab">Disponibilidad</button>
+    </nav>
+
+    <section id="tab-reservations" class="tab-panel">
+      <h2>Reservas</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Check-in</th>
+            <th>Check-out</th>
+            <th>Tipo</th>
+            <th>Personas</th>
+            <th>Creada</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="reservations-body"></tbody>
+      </table>
+      <p id="reservations-empty" class="muted"></p>
+    </section>
+
+    <section id="tab-availability" class="tab-panel hidden">
+      <div class="toolbar">
+        <label class="field">
+          <span>Tipo</span>
+          <select id="avail-roomtype">
+            <option value="private">Privada</option>
+            <option value="dorm">Dorm</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Días a mostrar</span>
+          <select id="avail-days">
+            <option value="30">30</option>
+            <option value="60">60</option>
+            <option value="90">90</option>
+          </select>
+        </label>
+        <div class="legend">
+          <span class="cell available-legend"></span> Disponible
+          <span class="cell blocked-legend"></span> Ocupado
+          <span class="cell past-legend"></span> Pasado
+        </div>
+      </div>
+      <div id="availability-grid" class="grid"></div>
+    </section>
+  </div>
+
+  <script src="/admin/app.js"></script>
+</body>
+</html>

@@ -3,27 +3,13 @@ import dotenv from 'dotenv';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MongoClient } from 'mongodb';
+import { getDb, isMongoConfigured } from './db.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const DATA_DIR = path.join(__dirname, 'data');
 const JSON_FILE = path.join(DATA_DIR, 'settings.json');
-
-const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-const useMongo = Boolean(mongoUri);
-
-let client = null;
-let collection = null;
-
-const ensureMongo = async () => {
-  if (collection) return;
-  client = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 5000 });
-  await client.connect();
-  const db = client.db(process.env.MONGO_DB || 'voice-bot');
-  collection = db.collection('settings');
-};
 
 const readJson = () => {
   try {
@@ -39,9 +25,9 @@ const writeJson = (data) => {
 };
 
 export const getSetting = async (key, fallback = null) => {
-  if (useMongo) {
-    await ensureMongo();
-    const doc = await collection.findOne({ key });
+  if (isMongoConfigured()) {
+    const db = await getDb();
+    const doc = await db.collection('settings').findOne({ key });
     return doc?.value ?? fallback;
   }
   const data = readJson();
@@ -49,9 +35,11 @@ export const getSetting = async (key, fallback = null) => {
 };
 
 export const setSetting = async (key, value) => {
-  if (useMongo) {
-    await ensureMongo();
-    await collection.updateOne({ key }, { $set: { value } }, { upsert: true });
+  if (isMongoConfigured()) {
+    const db = await getDb();
+    await db
+      .collection('settings')
+      .updateOne({ key }, { $set: { value } }, { upsert: true });
     return;
   }
   const data = readJson();

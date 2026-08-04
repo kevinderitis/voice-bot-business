@@ -1,0 +1,139 @@
+:root {
+  --bg: #f4f5f7;
+  --card: #ffffff;
+  --text: #1c2333;
+  --muted: #6b7280;
+  --border: #e2e4ea;
+  --primary: #3b5bdb;
+  --primary-hover: #2f4bd0;
+  --green: #2f9e6f;
+  --red: #e2474b;
+  --past: #eceef2;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.hidden { display: none !important; }
+
+.login-card {
+  max-width: 380px;
+  margin: 12vh auto;
+  padding: 28px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
+}
+
+.login-card h1 { font-size: 20px; margin: 0 0 20px; }
+
+.field { display: block; margin-bottom: 14px; }
+.field span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.field input,
+.field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+}
+
+.error-text { color: var(--red); font-size: 13px; min-height: 18px; margin: 4px 0 10px; }
+
+.btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.btn.primary { background: var(--primary); color: #fff; }
+.btn.primary:hover { background: var(--primary-hover); }
+.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.btn.danger { background: var(--red); color: #fff; }
+.btn.small { padding: 6px 10px; font-size: 13px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.topbar h1 { margin: 0; font-size: 20px; }
+.sub { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+
+.tabs { display: flex; gap: 8px; padding: 16px 24px 0; }
+.tab {
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--muted);
+}
+.tab.active { color: var(--text); font-weight: 600; border-color: var(--primary); }
+
+.tab-panel { padding: 20px 24px; }
+.tab-panel h2 { margin: 0 0 16px; font-size: 18px; }
+
+.table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.table th,
+.table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.table th { background: #fafbfc; color: var(--muted); font-weight: 600; }
+.table tr:last-child td { border-bottom: none; }
+
+.muted { color: var(--muted); }
+
+.toolbar { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.toolbar .field { width: 160px; margin: 0; }
+.legend { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-left: auto; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+
+.cell {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  background: var(--card);
+  min-height: 52px;
+}
+.cell .day { font-weight: 600; }
+.cell .state { font-weight: 600; }
+.cell.available { background: #e9f7f0; border-color: #bfe6d3; }
+.cell.available .state { color: var(--green); }
+.cell.available .state::after { content: 'Disponible'; }
+.cell.blocked { background: #fdecec; border-color: #f3c2c3; }
+.cell.blocked .state { color: var(--red); }
+.cell.blocked .state::after { content: 'Ocupado'; }
+.cell.past { background: var(--past); cursor: not-allowed; }
+.cell.past .state::after { content: 'Pasado'; }
+
+.available-legend { background: #e9f7f0; border: 1px solid #bfe6d3; cursor: default; min-height: 18px; width: 22px; padding: 0; }
+.blocked-legend { background: #fdecec; border: 1px solid #f3c2c3; cursor: default; min-height: 18px; width: 22px; padding: 0; }
+.past-legend { background: var(--past); border: 1px solid var(--border); cursor: default; min-height: 18px; width: 22px; padding: 0; }
+
+@media (max-width: 640px) {
+  .topbar { padding: 16px; }
+  .tabs, .tab-panel { padding: 12px 16px; }
+  .table { display: block; overflow-x: auto; }
+}
