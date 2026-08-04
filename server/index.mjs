@@ -237,7 +237,7 @@ wss.on('connection', (clientWs) => {
               functionResponses.push({ id: fc.id, name: fc.name, response: { error: err.message || 'La función falló' } });
             }
           }
-          safeSend(geminiWs, JSON.stringify({ toolCall: { functionResponses } }));
+          safeSend(geminiWs, JSON.stringify({ toolResponse: { functionResponses } }));
           handled = true;
         } else if (msg.toolCallCancellation) {
           console.log(`[gemini] tool calls cancelled: ${(msg.toolCallCancellation.ids || []).join(', ')}`);
